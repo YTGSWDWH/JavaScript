@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<style>
+
+</style>
+<body>
+
+</body>
+<script>
+    //prmise静态方法合集
+   //https://blog.csdn.net/weixin_45491473/article/details/117360807?spm=1001.2101.3001.6650.2&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7Edefault-2.no_search_link&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7Edefault-2.no_search_link
+    // promise.any
+        Promise.any = function (promises) {
+            return new Promise((resolve, reject) => {
+                let count = 0;
+                let errResult = [];
+                if (promises.length == 0) {
+                    resolve([]);
+                }
+                for (let item of promises) {
+                    Promise.resolve(item).then(
+                        (res) => {
+                            resolve(res);
+                        },
+                        (err) => {
+                            errResult[count++] = err;
+                            if (count == promises.length) {
+                                reject(errResult);
+                            }
+                        }
+                    );
+                }
+            });
+        };
+    //手写Promise.all方法
+     Promise.all=function(promises){
+        return new Promise((resolve,reject)=>{
+            if(!(promises instanceof Array)){
+                return reject(new Error('传入参数必须为数组'))
+            }
+            let count=0
+            let arr=[]
+            for(let i=0;i<promises.length;i++){
+                Promise.resolve(promises[i]).then(result=>{  //传入的参数可能是个常数，非promise对象
+                    count++
+                    arr[i]=result
+                    if(count===promises.length){
+                        resolve(arr)
+                    }
+                },error=>{
+                    reject(error)
+                })
+            }
+        })
+    }
+
+    //promise.all中，其中一个promise出错，如何确保执行到最后
+    Promise.all([p1, p2, p3].map(p => p.catch(e => '出错后返回的值' )))
+        .then(values => {
+            console.log(values);
+        }).catch(err => {
+    })
+    //promise实现并发控制
+    function limitLoad(urls,handler,limit){
+        const sequence=[].concat(urls)
+        let promises=[]
+        promises=sequence.splice(0,limit).map((url,index)=>{
+            return handler(url).then(()=>{
+                return index
+            })
+        })
+            let p=Promise.race(promises)
+            for(let i=0;i<sequence.length;i++){
+                p=p.then((res)=>{
+                    promises[res]=handler(sequence[i]).then(()=>{
+                        return res
+                    })
+                    return Promise.race(promises)
+                })
+            }
+    }
+    const urls=[{
+        info:'link1',
+        time:3000
+    },
+    {
+        info:'link2',
+        time:2000
+    },
+    {
+        info:'link3',
+        time:5000
+    },
+    {
+        info:'link4',
+        time:1000
+    },
+    {
+        info:'link5',
+        time:1200
+    },
+    {
+        info:'link6',
+        time:2000
+    },
+    {
+        info:'link7',
+        time:800
+    },{
+        info:'link8',
+        time:3000
+    }
+    ]
+    //设置我们要执行的任务
+    function loadImg(url){
+         return new Promise((resolve,reject)=>{
+             console.log("----"+url.info+"start!")
+             setTimeout(()=>{
+                 console.log(url.info+"OK!!!")
+                 resolve()
+             },url.time)
+         })
+    }
+    limitLoad(urls,loadImg,3)
+//手写promise
+    function Promise(constructor){
+        let  _this=this
+        _this.value=undefined
+        _this.reason=undefined
+        _this.status='pending'
+        _this. onResolveFunction=[]
+        _this. onRejectFunction=[]
+        function resolve(value){
+            _this.value=value
+            _this.status='Resolved'
+            _this.onResolveFunction.forEach(resolved=>resolved(value))
+        }
+        function reject(reason){
+            _this.value=reason
+            _this.status='Rejected'
+            _this.onRejectFunction.forEach(rejected=>rejected(reason))
+        }
+        constructor(resolve,reject)
+    }
+    Promise.prototype.then=function(onResolved,onRejected){
+         if(this.status==='pending'){
+             this.onResolveFunction.push(onResolved)
+             this.onRejectFunction.push(onRejected)
+         }
+         if(this.status==='Resolved'){
+             onResolved(this.value)
+         }
+         if(this.status==='Rejected'){
+             onRejected(this.reason)
+         }
+    }
+    //手写ajax  promies封装ajax
+    function myAjax(method,url) {
+        return  new Promise((resolve, reject)=>{
+            let hrt= new XMLHttpRequest()
+            hrt.open(method,url)
+            hrt.send()
+            hrt.onreadystatechange=function () {
+                if(hrt.readyState===4){
+                    if(hrt.status>=200&&hrt.status<300){
+                        resolve(hrt.responseText)
+                    }
+                    else{
+                        reject()
+                    }
+                }
+            }
+        })
+    }
+    //手写reduce方法
+    Array.prototype.myReduce = function (fn,value){
+        if(Object.prototype.toString.call(fn)!=='[object Function]'){
+            throw new Error('传入为非函数')
+        }
+        let arr=this
+        let index=arguments.length===1?1:0
+        let res=arguments.length===1?arr[0]:value
+        for(let i=index;i<arr.length;i++){
+            res=fn(res,arr[i],i,arr)
+        }
+        return res
+    }
+    //手写filter方法
+    Array.prototype.myFilter=function(fn,thisArgs){
+        if(Object.prototype.toString.call(fn)!=='[object Function]'){
+            throw new Error('传入为非函数')
+        }
+        let arr=this
+        let res=[]
+        for(let i=0;i<arr.length;i++){
+            if(fn.call(thisArgs,arr[i],i,arr)){
+                res.push(arr[i])
+            }
+        }
+        return res
+    }
+    //手写map方法
+    Array.prototype.myMap=function(fn,thisArgs){
+        if(Object.prototype.toString.call(fn)!=='[object Function]'){
+            throw new Error('传入为非函数')
+        }
+        let arr=this
+        let res=[]
+        for(let i=0;i<arr.length;i++){
+                res.push(fn.call(thisArgs,arr[i],i,arr))
+        }
+        return res
+    }
+    //forEach方法中没有返回值，返回值为undefined
+    Array.prototype.myForEach=function(fn,thisArgs){
+         if(Object.prototype.toString.call(fn)!=='[object Function]'){
+             throw new Error('传入非函数')
+         }
+         let res=this
+        for(let i=0;i<res.length;i++){
+            fn.call(thisArgs,res[i],i,res)
+        }
+    }
+    //手写every方法
+    Array.prototype.myMap=function(fn,thisArgs){
+        if(Object.prototype.toString.call(fn)!=='[object Function]'){
+            throw new Error('传入为非函数')
+        }
+        let arr=this
+        for(let i=0;i<arr.length;i++){
+            if(!fn.call(thisArgs,arr[i],i,arr)){
+                return false
+            }
+        }
+        return true
+    }
+    //手写some方法
+    Array.prototype.myMap=function(fn,thisArgs){
+        if(Object.prototype.toString.call(fn)!=='[object Function]'){
+            throw new Error('传入为非函数')
+        }
+        let arr=this
+        for(let i=0;i<arr.length;i++){
+            if(fn.call(thisArgs,arr[i],i,arr)){
+                return true
+            }
+        }
+        return false
+    }
+    //定义扁平函数  数组拍平
+    function flat(arr,n){
+        var res=[];
+        if(n===0){
+            return arr;
+        }
+        for(let i=0;i<arr.length;i++){
+            if(arr[i] instanceof Array){
+                res=res.concat(flat(arr[i],n-1));
+            }else{
+                res=res.concat(arr[i]);
+            }
+        }
+        return res;
+    }
+    //定义深拷贝函数
+    function deepClone(obj){
+        if(obj==null|| (obj instanceof Object===false))
+        {
+            return obj;
+        }
+        let res;
+        if(obj instanceof Array){
+            res=[];
+        }else{
+            res={};
+        }
+        for(key in obj){
+            if(obj.hasOwnProperty(key)){
+                res[key]=deepClone(obj[key]);
+            }
+        }
+        return res;
+    }
+    //定义深拷贝函数 解决循环引用
+    function deepClone1(target) {
+        const map = new Map()
+        function clone (target) {
+            if (isObject(target)) {
+                let cloneTarget = isArray(target) ? [] : {};
+                if (map.get(target)) {
+                    return map.get(target)
+                }
+                map.set(target,cloneTarget)
+                for (const key in target) {
+                    cloneTarget[key] = clone(target[key]);
+                }
+                return cloneTarget;
+            } else {
+                return target;
+            }
+        }
+        return clone(target)
+    }
+    //call函数
+    Function.prototype.myCall=function(obj ,...a){
+        if (typeof obj === 'undefined' || obj === null) {
+            obj = window
+        }
+        let fn=Symbol()
+        obj[fn]=this;
+        let res=obj[fn](...a);
+        delete obj[fn];
+        return res
+    }
+    //apply函数
+    Function.prototype.myApply=function(obj ,a=[]){
+        if (typeof obj === 'undefined' || obj === null) {
+            obj = window
+        }
+        let fn=Symbol()
+        obj[fn]=this;
+        let res=obj[fn](...a);
+        delete obj[fn];
+        return res
+    }
+    //bind函数
+    Function.prototype.myBind=function(obj ,...a){
+        if (typeof obj === 'undefined' || obj === null) {
+            obj = window
+        }
+        var  res=this;
+        return function(){
+            return res.call(obj,...a);
+        }
+    }
+    //十进制转二进制
+    console.log((10>>>0).toString(2));
+    //二进制转十进制
+    console.log(parseInt(1010,2).toString(10));
+    // //二分查找
+    function secondBye(arr,target){
+        var left=0;
+        var right=arr.length-1;
+        while(left<=right){
+            var mid=left+Math.floor((right-left)/2);
+            if(arr[mid]==target){
+                return mid;
+            }else if(arr[mid]<target){
+                left=mid+1;
+            }else if(arr[mid]>target){
+                right=mid-1;
+            }
+        }
+        return -1;
+    }
+    //2. 找出一个数字数组中出现次数最多的数字
+    Array.prototype.find=function(){
+        let arr=this
+        let count=1
+        let value
+        let max=-Infinity
+        let res=[]
+        var map=new Map()
+        for(let i=0;i<arr.length;i++){
+            if(!map.has(arr[i])){
+                map.set(arr[i],count)
+            }else{
+                map.set(arr[i],map.get(arr[i])+1)
+            }
+        }
+      for(value of map){
+          if(value[1]>max){
+              max=value[1]
+              res=value
+          }
+      }
+            return res
+    }
+    var test=[1,1,2,3,4,5,1,1,1,6]   //测试
+    var  res=test.find()
+    console.log("出现次数最多的数字为"+res[0])
+    console.log("次数为"+res[1])
+    // 3、编程题A 实现两个有序数组的合并。
+    function concat(arr1,arr2){
+        let res=[]
+        res=[...arr1,...arr2]
+        return res.sort((c,d)=>{
+            return c-d
+        })
+    }
+    //驼峰表示法
+    function changeTop(str){
+        var arr=str.split("_");
+        for(let i=1;i<arr.length;i++){
+            let temp=arr[i].slice(1)
+            arr[i]=arr[i].charAt(0).toUpperCase().concat(temp)
+        }
+        return arr.join("");
+    }
+    //防抖  在设定的时间内，如果又一次触发目标函数 则定时器重新开始延时
+    function fangDou(fn){
+        let timer;//采用到闭包
+        let count=0;
+        return function(){
+            //清除定时器
+            if(count==0){    //实现一开始就执行想要的函数
+                console.log(1);
+                count++;
+            }else{
+                clearTimeout(timer)
+                timer=setTimeout(()=>{
+                    console.log(1)
+                    fn.apply(this,arguments)
+                },1000);
+                count++;
+            }
+
+        }
+    }
+    //节流  单位时间内目标函数只执行一次
+    function jieLiu(fn){
+        let timer;//采用到闭包
+        return function(){
+            if(!timer){
+                timer=setTimeout(()=>{
+                    console.log(1)
+                    fn.apply(this,arguments)
+                    timer=null          //变为空的
+                },2000);
+
+            }
+        }
+    }
+    //防抖  在设定的时间内，如果又一次触发目标函数 则定时器重新开始延时
+    function fangdou(fn,waits){
+      var timer=null
+        return function(){
+          var firstClick=!timer
+            if(timer){
+                clearTimeout(timer)
+            }
+            if(firstClick){
+                fn.apply(this,arguments)
+            }
+            timer=setTimeout(()=>{
+                timer=null
+            },waits)
+        }
+    }
+    //节流  单位时间内目标函数只执行一次
+    function jieLiu(fn,delay){
+        let begin=0;//采用到闭包
+        return function(){
+           let cur=new Date().getTime()
+            if(cur-begin>delay){
+                fn.apply(this,arguments)
+                begin=cur
+            }
+        }
+    }
+    //前中后序遍历
+    function pre(root){
+        if(!root)return
+        console.log(root.val)
+        pre(root.left)
+
+        pre(root.right)
+    }
+    //手写前序遍历（非递归）
+    function pre(root){
+        if(!root)return
+        const stack = [root];
+        while(stack.length) {
+            const node = stack.pop();
+            if(node.right) stack.push(node.right);
+            if(node.left) stack.push(node.left);
+            console.log(node.val)
+        }
+    }
+    //手写中序遍历（非递归）
+    function mid(root){
+        if (!root) return;
+        // 定义一个指针指向root
+        let p = root;
+        // 定义一个栈
+        const stack = [];
+        // 这里地方要|| p是因为不加的话，最开始它就不跑进来了
+        while(stack.length || p) {
+            // 只要p不为空，就一直去找左节点，压栈
+            while(p) {
+                stack.push(p)
+                p = p.left;
+            }
+            // 第一轮的这个时候已经找到最左边边的结点了，给它pop出来
+            const node = stack.pop();
+            console.log(node.val)
+            // 这个时候左结点和根结点都已经pop出来了，要去遍历右节点
+            p = node.right;
+        }
+    }
+    //手写后序遍历（非递归）
+    function last(root){
+        if(!root)return
+        const stack = [root];
+        const out_stack = [];
+        while(stack.length) {
+            const node = stack.pop();
+            out_stack.push(node)
+            if(node.left) stack.push(node.left);
+            if(node.right) stack.push(node.right);
+        }
+        // 输出栈再pop打印一下就好啦
+        while(out_stack.length) {
+            const n = out_stack.pop();
+            console.log(n.val)
+        }
+    }
+    //反转链表
+    function reverse(head){
+        if(head===null)return head
+        if(head.next ===null)return head
+        let last=reverse(head.next)
+        head.next.next=head
+        head.next=null
+        return last
+    }
+    //千分位
+    function parseNum(number){
+        var arr =  String(number).split(".");
+        //定义一个数组，将要分割的数组转为字符串并判断时候为整数，小数位使用split在小数点处分割开
+        var list = arr[0].split('').reverse();
+        //定义list来装分割出的整数部分，并转化为数组，使用reverse方法将其反转
+        for(var i = 0; i < list.length; i++){
+            //定义变量，判断list的长度
+            if(i % 4 == 3){
+                //当长度为三位时，使用splice方法增加逗号。splice(位置，0（增加）,增加的东西)
+                list.splice(i, 0, ',');
+            }
+        }
+        list = list.reverse().join('');
+        // 将list在反转过来并使用join的方法将其变为数字
+        if(arr[1] !== undefined){
+            //当小数位不为undefined值时（有小数）
+            list = list + '.' + arr[1];
+
+        }
+        console.log(typeof (list-0))
+        return list;
+    }
+    console.log(parseNum(1234567890.111));
+    
+    //千分位reduce
+    function format(num) {
+        var str = num+'';
+        // ["8", "7", "6", "5", "4", "3", "2", "1"]
+        return str.split("").reverse().reduce((prev, next, index) => {
+            console.log(prev, next,index)
+            return ((index % 3) ? next : (next + ',')) + prev;
+        })
+    }
+    console.log(format(12345678));
+    //邮箱正则
+    // /^\w{3,}(\.\w+)*@[A-z 0-9]+(\.[A-z]{2,5}){1,2}$/
+    var str = '这是一篇文章：加快递费3.22X10^5，就开始的经费3673降低开jvjsldfjXDJKFLD发洛索洛芬2/3，是杜绝浪费120.12345，晋升的了客服-2344'
+    var numArr = str.match(/(\d+\.\d+\X\d+\^\d+)|(\d+\.\d+)|(\d+\/\d+)|\d+|\-\d+/g)
+    console.log(numArr)
+    strr.replace(/^\s*/,"")
+    strr.replace(/\s*$/,"")
+    strr.replace(/^\s*|\s*$/g,"")
+
+
+    //已知数组 a=[1,[2,[3,[4,null]]]], 实现数组 b=[4,[3,[2,[1,null]]]] ，考虑n级嵌套的情况
+    function reverse(arr,temp){
+        if(arr[1]===null)return [arr[0],temp]
+        temp=temp?[arr[0],temp]:[arr[0],null]
+        return reverse(arr[1],temp)
+    }
+    let a=[1,[2,[3,[4,null]]]]
+    console.log(reverse(a))
+
+//js手写单例模式
+    class Observer{
+        constructor() {
+            this.events = {}
+            this.instance = null
+        }
+    }
+    Observer.getInstance = function (){
+        if(this.instance == null){
+            this.instance = new Observer
+        }
+        return this.instance
+    }
+
+    let o1 = Observer.getInstance()
+    let o2 = Observer.getInstance()
+    console.log(o1 === o2)
+
+    //手写快排
+    function sort(arr){
+        if(arr.length===0||arr.length===1)return arr
+        let left=[]
+        let right=[]
+        let mid=arr.splice(Math.floor(arr.length/2),1)
+        arr.forEach(item=>{
+            if(item>mid) {
+                right.push(item)
+            }else{
+                left.push(item)
+            }
+        })
+        return sort(left).concat(mid).concat(sort(right))
+    }
+    console.log(sort([1,2,8,0,6,4,2,3]))
+    //手写冒泡
+    function sort(arr){
+        let temp
+        for(let i=0;i<arr.length-1;i++){
+            for(let j=0;j<arr.length-1-i;j++){
+                if(arr[j]>arr[j+1]){
+                    temp=arr[j]
+                    arr[j]=arr[j+1]
+                    arr[j+1]=temp
+                }
+            }
+        }
+
+        return arr
+    }
+    console.log(sort([0,2,8,1,3,9,5,0]))
+    //手写选择
+    function sort(arr){
+        let temp
+        for(let i=0;i<arr.length-1;i++) {
+            let min = i
+            for (let j = i + 1; j < arr.length; j++) {
+                if (arr[min] > arr[j]) {
+                    min = j
+                }
+            }
+            temp = arr[min]
+            arr[min] = arr[i]
+            arr[i] = temp
+        }
+        return arr
+    }
+    console.log(sort([5,1,2,3,0,2,3,5,7]))
+    //手写插入
+    function sort(arr){
+        let temp
+        for(let i=0;i<arr.length-1;i++) {
+            for (let j = i + 1; j >0; j--) {
+                if (arr[j]<arr[j-1]) {
+                    temp = arr[j]
+                    arr[j] = arr[j-1]
+                    arr[j-1] = temp
+                }else{
+                    break
+                }
+            }
+        }
+        return arr
+    }
+    console.log(sort([5,5,6,28,2,9,3,5,7]))
+    //类继承
+    class Person {
+        constructor(name) {
+            this.name=name;
+        }
+        teacher(){
+            console.log(`我是${this.name},是${this.age}`)
+        }
+    }
+    class Student extends Person{
+        constructor(name,age) {
+            super(name);
+            this.age=age;
+        }
+    }
+    let student=new Student('张超',20)
+    student.teacher()
+    class Teacher extends Person{
+        constructor(name,age) {
+            super(name);
+            this.age=age;
+        }
+    }
+    let teacher=new Student('张超',24)
+    teacher.teacher()
+    console.log(teacher.constructor.name)
+    console.log(teacher)
+
+    //手写vue数据双向绑定
+    var obj1={
+        pwd:123
+    }
+    Object.defineProperty(obj1,'userName',{
+        get:function(){
+            console.log('get target')
+        },
+        set:function(val){
+            console.log('set target')
+            document.getElementById('user').innerHTML=val
+            //...
+        }
+    })
+    document.getElementById('user').addEventListener("keyup", function(e){
+        obj.userName=e.target.val
+    })
+    //用Promise实现sleep
+    async function test() {
+        for (var i = 0; i < 10; i++) {
+            await sleep(1000);
+            console.log(i);
+        }
+    }
+    function sleep(delay) {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                try {
+                    resolve()
+                } catch (e) {
+                    reject()
+                }
+            }, delay);
+        })
+    }
+    test()
+    //将数组转变成树状结构
+    function toTree(data){
+        let tree=[]
+        let itemTree={}
+        data.forEach(item=>{
+            item.children=[]
+            itemTree[item.id]=item
+        })
+        data.forEach(item=>{
+            if(item.pid){
+                itemTree[item.pid].children.push(item)
+            }else{
+                tree.push(item)
+            }
+        })
+        return tree
+    }
+    console.log(toTree(data))
+
+//滴滴
+
+
+//获取嵌套数组/对象中的值
+let obj = {a: {b: {c: 1}}};
+function getObjChild(obj, key, gap='.') {
+        let tmp = {};
+        let arr = key.split(gap); //将key拆成数组
+
+        if (obj[arr[0]]) {
+            tmp = obj[arr[0]];
+            for (let i=1; i<arr.length; i++) { //逐层进入匹配查找
+                let is_found = false;
+                if (typeof tmp === 'object') {
+                    for(let j in tmp) {
+                        if (j === arr[i]) {
+                            tmp = tmp[j];
+                            is_found = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!is_found) {
+                    tmp = false;
+                    console.log('未找到 '+ arr[i]);
+                    break;
+                }
+            }
+        } else {
+            console.log('未找到 '+ arr[0]);
+            tmp = false;
+        }
+
+        return tmp;
+    }
+
+console.log(getObjChild(obj,'a.b.c' ))
+
+//截取字符串后几位
+var str="abcdefghhhh";//截取后4位
+str.substring(str.length-4);
+
+//*号代替
+//18位省份证号    前三位显示中间10位有8个*代替后5位显示  331********00311 
+var str ='331023187609300311';  
+str.replace(/(\d{3})\d{10}(\d{5})/, '$1********$2');
+
+
+//js-获取一个字符串中出现次数最多的字符，并统计次数
+function census(aim) {
+            aim = aim.split("");
+            //利用对象键不能相同，统计每个字符出现的次数
+            var result = {};
+            //存储出现最多的字符
+            var max_key;
+            //存储出现最多的字符的次数
+            var max = 0;
+
+            // 统计每个字符出现的次数
+            for (var i = 0; i < aim.length; i++) {
+                //存储每个字符出现的次数
+                var n = 0;
+                for (var j = 0; j < aim.length; j++) {
+                    if (aim[i] === aim[j]) {
+                        n++;
+                    }
+                }
+                result[aim[i]] = n;
+            }
+            //得到出现最多的字符 及 次数
+            for (var key in result) {
+                if (max < result[key]) {
+                    max = result[key];
+                    max_key = key;
+                }
+            }
+            //返回结果
+            return {key:max_key,max:max}
+        }
+        var str = "dddddssss222";
+        var result = census(str);
+        console.log(result);
+
+
+
+
+</script>
+
+</html>
