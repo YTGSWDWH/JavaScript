@@ -40,3 +40,36 @@
     width: 100px;
   }
 ```
+
+### 伪类选择器
+```css
+  <a href = "">点我跳转</a>
+  
+  a:hover {
+    color: red;
+  }
+```
+
+### 后代选择器
+```css
+  <div>
+    <span>Span1
+      <span>Span 2</span>
+    </span>
+  </div>
+  <span>Span 3</span>
+  
+  span {
+    background-color: white;
+  }
+  
+  div span {
+    background-color: blue;
+  }
+```
+
+### CSS盒模型
+* 内容区域content
+* 内边距区域padding
+* 边框区域border
+* 外边距区域margin
